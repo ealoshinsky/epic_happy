@@ -31,8 +31,7 @@ package cmd
 
 import (
 	"github.com/urfave/cli"
-	"fmt"
-	"os"
+	"errors"
 )
 
 // exec check subargs and prepare some data before start work
@@ -44,12 +43,10 @@ func exec(context *cli.Context) error {
 	)
 
 	if backend == "" {
-		fmt.Println("[-] Missing required parameter", "no backend specified")
-		os.Exit(-1)
+		return errors.New("[-] Missing required parameter: no backend specified")
 	}
 	if countNumbers == 0 {
-		fmt.Println("[-] Missing required parameter:", "number of rooms not specified")
-		os.Exit(-1)
+		return errors.New("[-] Missing required parameter: count of phone number not specified")
 	}
 	return nil
 }
