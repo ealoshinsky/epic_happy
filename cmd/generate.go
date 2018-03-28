@@ -25,20 +25,53 @@ OTHER DEALINGS IN THE SOFTWARE.
 For more information, please refer to <http://unlicense.org>
 */
 
-package main
+// File describe command 'generate' may used for getting virtual sim (phone number) from other service
+
+package cmd
 
 import (
-	"github.com/ealoshinsky/epic_happy/cmd"
+	"github.com/urfave/cli"
+	"fmt"
 	"os"
 )
 
-var (
-	buildTime = "unset"
-	commit = "unset"
-	release = "unset"
-	appName = "unset"
-)
+// exec check subargs and prepare some data before start work
+func exec(context *cli.Context) error {
 
-func main() {
-	cmd.Run(os.Args, release, commit, buildTime, appName)
+	var (
+		backend 		= context.String("backend")
+		countNumbers 	= context.Int("count")
+	)
+
+	if backend == "" {
+		fmt.Println("[-] Missing required parameter", "no backend specified")
+		os.Exit(-1)
+	}
+	if countNumbers == 0 {
+		fmt.Println("[-] Missing required parameter:", "number of rooms not specified")
+		os.Exit(-1)
+	}
+	return nil
+}
+
+var generateCommand = cli.Command{
+	Usage: "Generate virtual sim(phone number) from passed backend",
+	Name: "generate",
+	Aliases: []string{"g"},
+	Action:  exec, // <- exec command function,
+	// describer sub args
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			// backend used for get phone number
+			Usage: "backend used for get phone number",
+			Name: "backend, b",
+			Value: "",
+		},
+		cli.IntFlag{
+			// how many number need
+			Usage: "how many number needs",
+			Name: "count,c",
+			Value: 0,
+		},
+	},
 }

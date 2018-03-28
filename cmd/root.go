@@ -25,20 +25,50 @@ OTHER DEALINGS IN THE SOFTWARE.
 For more information, please refer to <http://unlicense.org>
 */
 
-package main
+// File describer entrance point
+
+package cmd
 
 import (
-	"github.com/ealoshinsky/epic_happy/cmd"
+	"github.com/urfave/cli"
+	"fmt"
+	"strings"
+	"github.com/ealoshinsky/epic_happy/libs"
 	"os"
 )
 
-var (
-	buildTime = "unset"
-	commit = "unset"
-	release = "unset"
-	appName = "unset"
-)
+// Run represent entrance point for the entire application
+func Run(args []string, release, commit, buildTime, appName string){
+	app := cli.NewApp()
+	app.Name = appName
+	app.Usage = "Getting up rating in telegram groups and channels"
+	app.Version = release
 
-func main() {
-	cmd.Run(os.Args, release, commit, buildTime, appName)
+	// showing version
+	cli.VersionPrinter = func(c *cli.Context) {
+		fmt.Println(appName, "-", strings.ToLower(app.Usage))
+		fmt.Printf("Build version: %s\nFrom commit: %s\nBuild at: %s\n", release, commit, buildTime)
+	}
+
+	// set global args
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name: "config-file",
+			Value: libs.GetHomeDirectory() + "/epdata/config.yml",
+			Usage: "Load configuration from file",
+		},
+
+	}
+
+	// set commands
+	app.Commands = []cli.Command{
+		generateCommand,
+	}
+
+	// start app
+	if reason := app.Run(args);reason != nil {
+		fmt.Println(reason)
+		os.Exit(1)
+	}
+
 }
