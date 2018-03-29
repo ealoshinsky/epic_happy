@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/shelomentsevd/mtproto"
+  packages = ["."]
+  revision = "790af5fa0545bdd0d4f6538875a8434da369806a"
+
+[[projects]]
   name = "github.com/urfave/cli"
   packages = ["."]
   revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
@@ -22,6 +28,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a82cfadf0e4cf3edb30ec6a2d785440917bae88ba656fea40f0af5aadadd9e70"
+  inputs-digest = "785e177d5d7716a5522b27ac290fd93d3ebafb89c3bb255c5370cfde1234ff2e"
   solver-name = "gps-cdcl"
   solver-version = 1
