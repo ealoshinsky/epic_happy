@@ -7,7 +7,7 @@ arch ?= amd64
 
 .PHONY: check
 check: prepare_metalinter
-	gometalinter --vendor ./...
+	gometalinter --deadline=60s --vendor ./...
 
 .PHONY: build
 build: clean
