@@ -32,6 +32,8 @@ package cmd
 import (
 	"github.com/urfave/cli"
 	"errors"
+	"github.com/ealoshinsky/epic_happy/libs"
+	"fmt"
 )
 
 // exec check subargs and prepare some data before start work
@@ -42,12 +44,17 @@ func exec(context *cli.Context) error {
 		countNumbers 	= context.Int("count")
 	)
 
+	// load configuration file
+	config := libs.LoadConfig(context.GlobalString("config-file"))
+	fmt.Println(config)
+
 	if backend == "" {
 		return errors.New("[-] Missing required parameter: no backend specified")
 	}
 	if countNumbers == 0 {
 		return errors.New("[-] Missing required parameter: count of phone number not specified")
 	}
+
 	return nil
 }
 

@@ -1,0 +1,18 @@
+---
+# work directory
+data-dir: "data"
+
+#telegram credentials my be getting on https://my.telegram.org
+telegram-id: "asdasd"
+telegram-api: "asdasd"
+
+request-timeout: 250 #milisecond
+proxy-addr: "as"
+
+# Setting for supported sim backend see Readme.md
+sim-backend:
+  backend:
+    name: "simsms_org"
+    api-key: "asda"
+    timeout: 250 # millisecond
+

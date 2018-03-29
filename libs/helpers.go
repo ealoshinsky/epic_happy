@@ -32,6 +32,12 @@ package libs
 import (
 	"os/user"
 	"log"
+	"net/http"
+	"fmt"
+	"os"
+	"golang.org/x/net/proxy"
+	"io/ioutil"
+	"gopkg.in/yaml.v2"
 )
 
 // GetHomeDirectory return path to home directory for current os user.
@@ -41,5 +47,55 @@ func GetHomeDirectory() (homeDir string) {
 	} else {
 		homeDir = user.HomeDir
 	}
+	return
+}
+
+// HTTPProxyClient set proxy for http client
+func HTTPProxyClient(proxyAddr string) (client http.Client) {
+	if sock5, reason := proxy.SOCKS5("tcp", proxyAddr, nil, proxy.Direct); reason != nil {
+		fmt.Println("[-] Error create proxy. Check settings")
+		os.Exit(1)
+	} else {
+		client = http.Client{Transport: &http.Transport{Dial: sock5.Dial} }
+	}
+	return
+}
+
+
+// Config represent configuration yml file
+type Config struct {
+	DataDir        string `yaml:"data-dir"`
+	ProxyAddr      string `yaml:"proxy-addr"`
+	RequestTimeout int    `yaml:"request-timeout"`
+	SimBackend     struct {
+		Backend struct {
+			APIKey  string `yaml:"api-key"`
+			Name    string `yaml:"name"`
+			Timeout int    `yaml:"timeout"`
+		} `yaml:"backend"`
+	} `yaml:"sim-backend"`
+	TelegramAPI string `yaml:"telegram-api"`
+	TelegramID  string `yaml:"telegram-id"`
+}
+
+// LoadConfig represent configuration parse from yml file and convert to struct
+func LoadConfig(path string) (c Config) {
+	var _config Config
+
+	if _,  reason := os.Stat(path); os.IsNotExist(reason) {
+		fmt.Println("[-] Could not found configuration file by path:", path)
+		os.Exit(1)
+	}
+
+	if data, reason := ioutil.ReadFile(path); reason != nil {
+		fmt.Println("[-] Could not read config file:", reason)
+		os.Exit(1)
+	} else if reason := yaml.Unmarshal(data, &_config); reason != nil {
+		fmt.Println("[-] Could not parse config file:", reason)
+		os.Exit(1)
+	} else {
+		c = _config
+	}
+
 	return
 }
