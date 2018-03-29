@@ -115,8 +115,3 @@ func LoadConfig(path string) (c Config) {
 
 	return
 }
-
-
-func RegisterNewAccount() {
-
-}
