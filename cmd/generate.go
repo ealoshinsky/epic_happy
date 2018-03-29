@@ -33,7 +33,9 @@ import (
 	"github.com/urfave/cli"
 	"errors"
 	"github.com/ealoshinsky/epic_happy/libs"
-	"fmt"
+	"strings"
+
+	api "github.com/ealoshinsky/epic_happy/libs/backend"
 )
 
 // exec check subargs and prepare some data before start work
@@ -46,13 +48,17 @@ func exec(context *cli.Context) error {
 
 	// load configuration file
 	config := libs.LoadConfig(context.GlobalString("config-file"))
-	fmt.Println(config)
 
 	if backend == "" {
 		return errors.New("[-] Missing required parameter: no backend specified")
 	}
 	if countNumbers == 0 {
 		return errors.New("[-] Missing required parameter: count of phone number not specified")
+	}
+
+	// let's choice used backend
+	if strings.ToLower(backend) == "simsms" {
+		api.Execute(countNumbers, &config)
 	}
 
 	return nil

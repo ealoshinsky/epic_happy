@@ -51,12 +51,28 @@ func GetHomeDirectory() (homeDir string) {
 }
 
 // HTTPProxyClient set proxy for http client
-func HTTPProxyClient(proxyAddr string) (client http.Client) {
+func HTTPProxyClient(proxyAddr string) (client http.Client, ip string) {
+	ip = ""
+
 	if sock5, reason := proxy.SOCKS5("tcp", proxyAddr, nil, proxy.Direct); reason != nil {
 		fmt.Println("[-] Error create proxy. Check settings")
 		os.Exit(1)
 	} else {
+		//Check external IP
 		client = http.Client{Transport: &http.Transport{Dial: sock5.Dial} }
+		res, reason := client.Get("http://myexternalip.com/raw")
+		if reason != nil {
+			fmt.Println("[-] Could not get request to remote service:", reason)
+			os.Exit(1)
+		}
+
+		if data, reason := ioutil.ReadAll(res.Body);reason != nil {
+			fmt.Println("[-] Could not get external ip:", reason)
+			os.Exit(1)
+		} else {
+			ip = (string(data))
+		}
+
 	}
 	return
 }
@@ -98,4 +114,9 @@ func LoadConfig(path string) (c Config) {
 	}
 
 	return
+}
+
+
+func RegisterNewAccount() {
+
 }
