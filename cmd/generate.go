@@ -30,10 +30,13 @@ For more information, please refer to <http://unlicense.org>
 package cmd
 
 import (
-	"github.com/urfave/cli"
 	"errors"
-	"github.com/ealoshinsky/epic_happy/libs"
 	"strings"
+
+	"github.com/ealoshinsky/epic_happy/libs"
+	"github.com/urfave/cli"
+
+	"fmt"
 
 	api "github.com/ealoshinsky/epic_happy/libs/backend"
 )
@@ -42,12 +45,18 @@ import (
 func exec(context *cli.Context) error {
 
 	var (
-		backend 		= context.String("backend")
-		countNumbers 	= context.Int("count")
+		backend      = context.String("backend")
+		countNumbers = context.Int("count")
 	)
 
 	// load configuration file
 	config := libs.LoadConfig(context.GlobalString("config-file"))
+	if config.DataDir == "" {
+		fmt.Println("[!] Use default configuration file path and data storage")
+		config.DataDir = libs.GetHomeDirectory() + "/epdata"
+	} else if !strings.HasPrefix(config.DataDir, "/") {
+		fmt.Println("[!] Use current directory for data save")
+	}
 
 	if backend == "" {
 		return errors.New("[-] Missing required parameter: no backend specified")
@@ -58,15 +67,19 @@ func exec(context *cli.Context) error {
 
 	// let's choice used backend
 	if strings.ToLower(backend) == "simsms" {
-		api.Execute(countNumbers, &config)
+		api.ExecuteSimSmsOrg(countNumbers, &config)
+	} else if strings.ToLower(backend) == "smsko" {
+		api.ExecuteSmskoRu(countNumbers, &config)
+	} else {
+		return errors.New("[-] Could not resolve backend for generate account")
 	}
 
 	return nil
 }
 
 var generateCommand = cli.Command{
-	Usage: "Generate virtual sim(phone number) from passed backend",
-	Name: "generate",
+	Usage:   "Generate virtual sim(phone number) from passed backend",
+	Name:    "generate",
 	Aliases: []string{"g"},
 	Action:  exec, // <- exec command function,
 	// describer sub args
@@ -74,13 +87,13 @@ var generateCommand = cli.Command{
 		cli.StringFlag{
 			// backend used for get phone number
 			Usage: "backend used for get phone number",
-			Name: "backend, b",
+			Name:  "backend, b",
 			Value: "",
 		},
 		cli.IntFlag{
 			// how many number need
 			Usage: "how many number needs",
-			Name: "count,c",
+			Name:  "count,c",
 			Value: 0,
 		},
 	},

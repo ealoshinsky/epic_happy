@@ -7,11 +7,11 @@ arch ?= amd64
 
 .PHONY: check
 check: prepare_metalinter
-	gometalinter --deadline=60s --vendor ./...
+	gometalinter --deadline=240s --vendor ./...
 
 .PHONY: build
 build: clean
-	CGO_ENABLED=0 GOOS=${os} go build \
+	CGO_ENABLED=0 GOOS=${os} GOARCH=${arch} go build \
 		-ldflags "-X main.release=${release} -X main.commit=${commit} -X main.buildTime=${build_time} -X main.appName=${app_name}" \
 		-o  build/${os}/${app_name}-${arch}
 

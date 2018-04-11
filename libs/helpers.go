@@ -30,13 +30,15 @@ For more information, please refer to <http://unlicense.org>
 package libs
 
 import (
-	"os/user"
-	"log"
-	"net/http"
 	"fmt"
-	"os"
-	"golang.org/x/net/proxy"
 	"io/ioutil"
+	"log"
+	"math/rand"
+	"net/http"
+	"os"
+	"os/user"
+
+	"golang.org/x/net/proxy"
 	"gopkg.in/yaml.v2"
 )
 
@@ -59,14 +61,14 @@ func HTTPProxyClient(proxyAddr string) (client http.Client, ip string) {
 		os.Exit(1)
 	} else {
 		//Check external IP
-		client = http.Client{Transport: &http.Transport{Dial: sock5.Dial} }
+		client = http.Client{Transport: &http.Transport{Dial: sock5.Dial}}
 		res, reason := client.Get("http://myexternalip.com/raw")
 		if reason != nil {
 			fmt.Println("[-] Could not get request to remote service:", reason)
 			os.Exit(1)
 		}
 
-		if data, reason := ioutil.ReadAll(res.Body);reason != nil {
+		if data, reason := ioutil.ReadAll(res.Body); reason != nil {
 			fmt.Println("[-] Could not get external ip:", reason)
 			os.Exit(1)
 		} else {
@@ -76,7 +78,6 @@ func HTTPProxyClient(proxyAddr string) (client http.Client, ip string) {
 	}
 	return
 }
-
 
 // Config represent configuration yml file
 type Config struct {
@@ -91,14 +92,14 @@ type Config struct {
 		} `yaml:"backend"`
 	} `yaml:"sim-backend"`
 	TelegramAPI string `yaml:"telegram-api"`
-	TelegramID  string `yaml:"telegram-id"`
+	TelegramID  int32  `yaml:"telegram-id"`
 }
 
 // LoadConfig represent configuration parse from yml file and convert to struct
 func LoadConfig(path string) (c Config) {
 	var _config Config
 
-	if _,  reason := os.Stat(path); os.IsNotExist(reason) {
+	if _, reason := os.Stat(path); os.IsNotExist(reason) {
 		fmt.Println("[-] Could not found configuration file by path:", path)
 		os.Exit(1)
 	}
@@ -113,5 +114,38 @@ func LoadConfig(path string) (c Config) {
 		c = _config
 	}
 
+	return
+}
+
+var (
+	firstName = [...]string{"Richard", "Andrew", "Charles", "Milton", "Tupeni", "Meher", "Aaron", "Abagnale",
+		"Abbey", "Abel", "Abelson", "Abourezk", "Abrams", "Ace", "Adams", "Gaston", "Roselyne", "Francis",
+		"David", "Robert", "Alain", "Michael", "Joan", "Walter", "Philip James", "Bruce", "Frank", "Jack",
+		"Russell", "Julio", "Bill", "Ann", "Douglas", "Leonard Jr.", "Margaret", "Stephen", "Noel", "Abraham",
+		"William", "Jim", "Dinah", "Frank", "Stephen", "Seymour", "Francis", "Barry", "Robert X.", "Quentin",
+		"Davy", "Oliver", "Aleister", "David", "Robert", "Allan", "Ward", "Marie", "Richard J.", "Carson", "Daniel",
+		"Johnny", "Rodney", "Samuel", "Anthony", "Clarence", "Charles", "Dale", "Bette", "Miles", "Richard", "Carl R.",
+		"Moshe", "Howard", "James", "John", "Edward de", "Eugene V.", "Jack", "Edgar", "Ellen", "Eugène", "Zack de la",
+		"Tom", "Brad", "Anthony de", "Jacques de", "Deng", "John", "Chauncey", "Theo de", "Jacques", "René", "Jackie", "Paul",
+		"David", "Carl", "Ron", "Caroline", "Alberto", "Edward", "Khalil", "William", "André", "George", "Eric",
+		"John", "Haim", "Jean", "Rudy", "William Ewart", "Jean-Luc", "Mike", "Hermann", "Rudyard", "Henry", "Zalmay", "Stephanie",
+	}
+	lastName = [...]string{"Hank", "Frank", "Edward", "Reuben", "Hal", "James", "Creighton", "Jane", "Abigail", "Baba",
+		"Babbage", "Babbitt", "Bacevich", "Bach", "Bachelard", "Bachelot", "Bacon", "Baddiel", "Baden-Powell", "Badiou", "Badnarik",
+		"Baez", "Bagehot", "Bailey", "Baillie", "Bainimarama", "Baker", "Cortázar", "Cosby", "Coulter", "Coupland",
+		"Courtney", "Covington", "Coward", "Cowley", "Cowper", "Crace", "Craik", "Crane", "Crane", "Cra", "Crick", "Crimmins", "Cringely",
+		"Crisp", "Crockett", "Cromwell", "Cross", "Crowley", "Crumb", "Cunningham", "Curie", "Daley", "Daly",
+		"Damon", "Dangerfield", "Daniel", "Daniels", "Darrow", "Darwin", "Dauten", "Davisson", "Dawkins", "Dayan",
+		"Dean", "Dea", "Bono", "Debs", "Dee", "Degas", "Degeneres", "Delacroix", "Rocha", "Delay", "Delson", "Mello",
+		"Molay", "Xiaoping", "Denham", "Depew", "Raadt", "Derrida", "Descartes", "DeShannon", "Desmond", "Deutsch",
+		"Devine", "DeWolfe", "Dhavernas", "Giacometti", "Gibbon", "Gibran", "Gibson",
+		"Gide", "Gilder", "Gill", "Gilmore", "Ginott", "Giraudoux", "Giuliani", "Gladstone", "Godard",
+		"Godwin", "Goering", "Kipling", "Kissinger", "Khalilzad", "Zacharek",
+	}
+)
+
+// GenerateUsername generate names for Telegram account
+func GenerateUsername() (first string, last string) {
+	first, last = firstName[rand.Intn(len(firstName))], lastName[rand.Intn(len(lastName))]
 	return
 }
