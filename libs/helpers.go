@@ -84,7 +84,7 @@ type Config struct {
 	DataDir        string `yaml:"data-dir"`
 	ProxyAddr      string `yaml:"proxy-addr"`
 	RequestTimeout int    `yaml:"request-timeout"`
-	SimBackend     struct {
+	SimBackend     []struct {
 		Backend struct {
 			APIKey  string `yaml:"api-key"`
 			Name    string `yaml:"name"`
