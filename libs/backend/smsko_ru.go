@@ -37,6 +37,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/ealoshinsky/epic_happy/libs"
 )
@@ -70,6 +72,11 @@ func errorParseBody(body string) {
 	case "NO_NUMBERS":
 		{
 			fmt.Println("[-] No phone numbers for rent.")
+			os.Exit(1)
+		}
+	case "NO_ACTIVATION":
+		{
+			fmt.Println("[-] No activation found")
 		}
 	}
 }
@@ -77,9 +84,14 @@ func errorParseBody(body string) {
 // ExecuteSmskoRu implement io loop for get virtual number, get sms from telegram (register new account)
 // and store session by path from Config.DataDir
 func ExecuteSmskoRu(countNumbers int, c *libs.Config) {
-	var (
-		APIKey string
-	)
+	var APIKey string
+	// Warning
+	if countNumbers > 45 {
+		fmt.Println(strings.ToUpper("[WARNING]\nThe number of leased phone numbers is more than 45\n" +
+			"considering the features of the operating system, not all rented phone \n" +
+			"numbers will be embodied in the telegram accounts."))
+	}
+
 	for backend := range c.SimBackend {
 		if strings.ToLower(c.SimBackend[backend].Backend.Name) == "smsko_ru" ||
 			strings.ToLower(c.SimBackend[backend].Backend.Name) == "smsko.ru" {
@@ -107,9 +119,106 @@ func ExecuteSmskoRu(countNumbers int, c *libs.Config) {
 		fmt.Println("Your balance to low")
 		os.Exit(1)
 	} else {
-		fmt.Println("[+] Your balance:", balance)
+		fmt.Println("[+] Your balance:", balance, "rub")
 	}
 
+	fmt.Println("[!] Checks work environment.")
+	sessionStoragePath := os.TempDir() + "/epdata/"
+	if reason := os.MkdirAll(sessionStoragePath, 0777); reason != nil {
+		fmt.Println("Could not create directory:", reason)
+	}
+
+	lock := &sync.WaitGroup{}
+	for range make([]struct{}, countNumbers) {
+		lock.Add(1)
+		go func(l *sync.WaitGroup) {
+			defer l.Done()
+			phoneNumber, orderID := SmskoGetNumber(APIKey, client)
+			if phoneNumber != "" && orderID != "" {
+				fmt.Println("[+] Success order phone number:", phoneNumber, "with orderID:", orderID)
+			} else {
+				lock.Done()
+			}
+			// sent request to sign up
+			// and wait sms from telegram
+			// if telegram not send sms check phone as banned
+
+			sessionStoragePath = sessionStoragePath + phoneNumber
+			session := libs.NewSession(c.TelegramID, c.TelegramAPI, sessionStoragePath)
+			if session == nil {
+				os.Remove(sessionStoragePath)
+				lock.Done()
+			}
+			if reason := session.ConnectToServer(); reason != nil {
+				fmt.Println("[-] Error:", reason)
+				os.Remove(sessionStoragePath)
+				lock.Done()
+			}
+
+			authCode, reason := session.AuthSendCode(phoneNumber)
+			if reason != nil {
+				fmt.Println("[-] Error sent authenticate code:", reason)
+				os.Remove(sessionStoragePath)
+				lock.Done()
+			} else {
+				fmt.Println(SmskoSetStatus(APIKey, orderID, ready, client))
+			}
+
+			fmt.Println("Struct after send auth code:", authCode)
+			if !authCode.Phone_registered {
+				fmt.Println("Phone number", phoneNumber, "isn't registered")
+			} else {
+				fmt.Println("Phone number is registered")
+				SmskoSetStatus(APIKey, orderID, ban, client)
+				os.Remove(sessionStoragePath)
+				lock.Done()
+			}
+
+			deadline := time.After(18 * time.Minute)
+			heartbeat := time.Tick(30 * time.Second)
+			for {
+				select {
+				case <-deadline:
+					{
+						os.Remove(sessionStoragePath)
+						SmskoSetStatus(APIKey, orderID, cancel, client)
+						fmt.Println("End of time generate account. Clear all")
+						lock.Done()
+					}
+				case <-heartbeat:
+					{
+						fmt.Println("Processing and wait sms code")
+						status := SmskoGetStatus(APIKey, orderID, client)
+
+						if status == "STATUS_WAIT_CODE" {
+							fmt.Println("Wait sms code")
+						} else if status == "NO_ACTIVATION" {
+							fmt.Println("No activation found.")
+							lock.Done()
+						} else if status == "BAD_STATUS" {
+							fmt.Println("[-] Unknown error. Wrong status.")
+							lock.Done()
+						} else if strings.Contains(status, "STATUS_OK") {
+							sms := strings.Split(status, ":")
+							fmt.Println("Getting code:", sms[1])
+							reason := session.RegisterNewAccount(phoneNumber, sms[1], authCode.Phone_code_hash)
+							if reason != nil {
+								fmt.Println("[-] Error on registration new user:", reason)
+								lock.Done()
+							}
+
+							SmskoSetStatus(APIKey, orderID, cancel, client) // TODO: change to success
+							session.DisconnectFromServer()
+
+						} else {
+							fmt.Println(status)
+						}
+					}
+				}
+			}
+		}(lock) //
+	}
+	lock.Wait()
 }
 
 // SmskoGetNumberStatus return count available phones number for order
@@ -149,6 +258,63 @@ func SmskoGetBalance(apiKey string, client http.Client) (balance float64) {
 			fmt.Println("[-] Could not convert balance.")
 			os.Exit(1)
 		}
+	}
+	return
+}
+
+// SmskoGetStatus return status of order by id
+func SmskoGetStatus(apiKey string, orderID string, client http.Client) (status string) {
+	var URL = fmt.Sprintf(smskoRuEndpointAPI+"api_key=%s&action=getStatus&id=%s", apiKey, orderID)
+	if response, reason := client.Get(URL); reason != nil {
+		fmt.Println("[-] Error on sent request:", reason)
+		os.Exit(1)
+	} else if body, reason := ioutil.ReadAll(response.Body); reason != nil {
+		fmt.Println("[-] Error parse data after request:", reason)
+		os.Exit(1)
+	} else {
+		status = string(body)
+	}
+	return
+}
+
+const (
+	cancel = -1
+	ready  = 1
+	end    = 6
+	ban    = 8
+)
+
+// SmskoSetStatus change rent status by order id
+func SmskoSetStatus(apiKey string, orderID string, status int, client http.Client) (resp string) {
+	var URL = fmt.Sprintf(smskoRuEndpointAPI+"api_key=%s&action=setStatus&status=%d&id=%s",
+		apiKey, status, orderID)
+	if response, reason := client.Get(URL); reason != nil {
+		fmt.Println("[-] Error on sent request:", reason)
+		os.Exit(1)
+	} else if body, reason := ioutil.ReadAll(response.Body); reason != nil {
+		fmt.Println("[-] Error parse data after request:", reason)
+		os.Exit(1)
+	} else {
+		resp = string(body)
+	}
+	return
+}
+
+// SmskoGetNumber phone number rent
+func SmskoGetNumber(apiKey string, client http.Client) (phoneNumber string, orderID string) {
+	var URL = fmt.Sprintf(smskoRuEndpointAPI+"api_key=%s&action=getNumber&service=tg", apiKey)
+	if response, reason := client.Get(URL); reason != nil {
+		fmt.Println("[-] Error on sent request:", reason)
+		os.Exit(1)
+	} else if body, reason := ioutil.ReadAll(response.Body); reason != nil {
+		fmt.Println("[-] Error parse data after request:", reason)
+		os.Exit(1)
+	} else {
+		errorParseBody(string(body))
+		data := strings.Split(string(body), ":")
+		fmt.Println(data)
+		orderID = data[1]
+		phoneNumber = data[2]
 	}
 	return
 }

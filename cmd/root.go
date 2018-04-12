@@ -30,15 +30,16 @@ For more information, please refer to <http://unlicense.org>
 package cmd
 
 import (
-	"github.com/urfave/cli"
 	"fmt"
-	"strings"
-	"github.com/ealoshinsky/epic_happy/libs"
 	"os"
+	"strings"
+
+	"github.com/ealoshinsky/epic_happy/libs"
+	"github.com/urfave/cli"
 )
 
 // Run represent entrance point for the entire application
-func Run(args []string, release, commit, buildTime, appName string){
+func Run(args []string, release, commit, buildTime, appName string) {
 	app := cli.NewApp()
 	app.Name = appName
 	app.Usage = "Getting up rating in telegram groups and channels"
@@ -53,11 +54,10 @@ func Run(args []string, release, commit, buildTime, appName string){
 	// set global args
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name: "config-file",
+			Name:  "config-file",
 			Value: libs.GetHomeDirectory() + "/epdata/config.yml",
 			Usage: "Load configuration from file",
 		},
-
 	}
 
 	// set commands
@@ -66,7 +66,7 @@ func Run(args []string, release, commit, buildTime, appName string){
 	}
 
 	// start app
-	if reason := app.Run(args);reason != nil {
+	if reason := app.Run(args); reason != nil {
 		fmt.Println(reason)
 		os.Exit(1)
 	}

@@ -30,11 +30,12 @@ For more information, please refer to <http://unlicense.org>
 package libs
 
 import (
-	"github.com/shelomentsevd/mtproto"
-	"fmt"
-	"os"
 	"errors"
+	"fmt"
+
+	"github.com/shelomentsevd/mtproto"
 )
+
 // SessionTelegram integrate mtproto.MTProto
 type SessionTelegram struct{ mtproto.MTProto }
 
@@ -44,10 +45,11 @@ func NewSession(TelegramID int32, TelegramAPI string, sessionPath string) *Sessi
 	if proto, reason := mtproto.NewMTProto(TelegramID, TelegramAPI,
 		mtproto.WithAuthFile(sessionPath, false)); reason != nil {
 		fmt.Println("Could not create session by path:", sessionPath, "[", reason, "]")
-		os.Exit(1)
+		return nil
 	} else {
 		return &SessionTelegram{(*proto)}
 	}
+
 	return nil
 }
 
@@ -68,21 +70,23 @@ func (account *SessionTelegram) DisconnectFromServer() error {
 }
 
 //RegisterNewAccount create SessionTelegram in telegram
-func (account *SessionTelegram) RegisterNewAccount(PhoneNumber string, smsCode string, Phone_code_hash string) (*mtproto.TL_auth_authorization, error) {
+func (account *SessionTelegram) RegisterNewAccount(PhoneNumber string, smsCode string, Phone_code_hash string) error {
 	// Let's attempt create SessionTelegram in telegram
 	// Before try it, we need send sms code to PhoneNumber and check this code after
 	// and if new SessionTelegram success created user make auto sign in (see: SentCode, GetSmsFromSimSms  methods)
 	firstName, lastName := GenerateUsername()
-	if tl, reason := account.InvokeSync(mtproto.TL_auth_signUp{ Phone_number: PhoneNumber,
+	if tl, reason := account.InvokeSync(mtproto.TL_auth_signUp{Phone_number: PhoneNumber,
 		Phone_code_hash: Phone_code_hash,
-		Phone_code: smsCode,
-		First_name: firstName,
-		Last_name: lastName,
+		Phone_code:      smsCode,
+		First_name:      firstName,
+		Last_name:       lastName,
 	}); reason != nil {
 		// invoke signup
-		return nil, errors.New(reason.Error())
+		return errors.New(reason.Error())
 	} else {
-		return (*tl).(*mtproto.TL_auth_authorization), errors.New(reason.Error())
+		fmt.Println("[+] Success registed account with name", tl)
 	}
+
+	return nil
 
 }
