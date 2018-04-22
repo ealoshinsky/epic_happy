@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"os"
 	"fmt"
 	"net"
+	"os"
 	"sync"
 	"time"
 )

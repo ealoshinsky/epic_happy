@@ -42,7 +42,7 @@ import (
 )
 
 // exec check subargs and prepare some data before start work
-func exec(context *cli.Context) error {
+func execGenerateCmd(context *cli.Context) error {
 
 	var (
 		backend      = context.String("backend")
@@ -81,7 +81,7 @@ var generateCommand = cli.Command{
 	Usage:   "Generate virtual sim(phone number) from passed backend",
 	Name:    "generate",
 	Aliases: []string{"g"},
-	Action:  exec, // <- exec command function,
+	Action:  execGenerateCmd, // <- exec command function,
 	// describer sub args
 	Flags: []cli.Flag{
 		cli.StringFlag{

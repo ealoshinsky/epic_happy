@@ -91,8 +91,9 @@ type Config struct {
 			Timeout int    `yaml:"timeout"`
 		} `yaml:"backend"`
 	} `yaml:"sim-backend"`
-	TelegramAPI string `yaml:"telegram-api"`
-	TelegramID  int32  `yaml:"telegram-id"`
+	TelegramAPI string   `yaml:"telegram-api"`
+	TelegramID  int32    `yaml:"telegram-id"`
+	Channels    []string `yaml:"channels"`
 }
 
 // LoadConfig represent configuration parse from yml file and convert to struct

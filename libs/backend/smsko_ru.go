@@ -123,8 +123,8 @@ func ExecuteSmskoRu(countNumbers int, c *libs.Config) {
 	}
 
 	fmt.Println("[!] Checks work environment.")
-	sessionStoragePath := os.TempDir() + "/epdata/"
-	if reason := os.MkdirAll(sessionStoragePath, 0777); reason != nil {
+	TempSessionPath := os.TempDir() + "/epdata/"
+	if reason := os.MkdirAll(TempSessionPath, 0777); reason != nil {
 		fmt.Println("Could not create directory:", reason)
 	}
 
@@ -133,44 +133,41 @@ func ExecuteSmskoRu(countNumbers int, c *libs.Config) {
 		lock.Add(1)
 		go func(l *sync.WaitGroup) {
 			defer l.Done()
+			time.Sleep(250 * time.Microsecond)
 			phoneNumber, orderID := SmskoGetNumber(APIKey, client)
 			if phoneNumber != "" && orderID != "" {
 				fmt.Println("[+] Success order phone number:", phoneNumber, "with orderID:", orderID)
 			} else {
 				lock.Done()
 			}
-			// sent request to sign up
-			// and wait sms from telegram
-			// if telegram not send sms check phone as banned
-
-			sessionStoragePath = sessionStoragePath + phoneNumber
-			session := libs.NewSession(c.TelegramID, c.TelegramAPI, sessionStoragePath)
+			sessionPath := TempSessionPath + phoneNumber
+			session := libs.NewSession(c.TelegramID, c.TelegramAPI, sessionPath)
+			fmt.Println(sessionPath)
 			if session == nil {
-				os.Remove(sessionStoragePath)
+				os.Remove(sessionPath)
 				lock.Done()
 			}
 			if reason := session.ConnectToServer(); reason != nil {
 				fmt.Println("[-] Error:", reason)
-				os.Remove(sessionStoragePath)
+				os.Remove(sessionPath)
 				lock.Done()
 			}
 
 			authCode, reason := session.AuthSendCode(phoneNumber)
 			if reason != nil {
 				fmt.Println("[-] Error sent authenticate code:", reason)
-				os.Remove(sessionStoragePath)
+				os.Remove(sessionPath)
 				lock.Done()
 			} else {
 				fmt.Println(SmskoSetStatus(APIKey, orderID, ready, client))
 			}
 
-			fmt.Println("Struct after send auth code:", authCode)
 			if !authCode.Phone_registered {
 				fmt.Println("Phone number", phoneNumber, "isn't registered")
 			} else {
 				fmt.Println("Phone number is registered")
 				SmskoSetStatus(APIKey, orderID, ban, client)
-				os.Remove(sessionStoragePath)
+				os.Remove(sessionPath)
 				lock.Done()
 			}
 
@@ -180,7 +177,7 @@ func ExecuteSmskoRu(countNumbers int, c *libs.Config) {
 				select {
 				case <-deadline:
 					{
-						os.Remove(sessionStoragePath)
+						os.Remove(sessionPath)
 						SmskoSetStatus(APIKey, orderID, cancel, client)
 						fmt.Println("End of time generate account. Clear all")
 						lock.Done()
@@ -200,16 +197,14 @@ func ExecuteSmskoRu(countNumbers int, c *libs.Config) {
 							lock.Done()
 						} else if strings.Contains(status, "STATUS_OK") {
 							sms := strings.Split(status, ":")
-							fmt.Println("Getting code:", sms[1])
 							reason := session.RegisterNewAccount(phoneNumber, sms[1], authCode.Phone_code_hash)
 							if reason != nil {
 								fmt.Println("[-] Error on registration new user:", reason)
 								lock.Done()
 							}
 
-							SmskoSetStatus(APIKey, orderID, cancel, client) // TODO: change to success
+							SmskoSetStatus(APIKey, orderID, cancel, client)
 							session.DisconnectFromServer()
-
 						} else {
 							fmt.Println(status)
 						}
@@ -219,6 +214,20 @@ func ExecuteSmskoRu(countNumbers int, c *libs.Config) {
 		}(lock) //
 	}
 	lock.Wait()
+	//Copy valid session to dataDIr
+	sessionFiles, reason := ioutil.ReadDir(TempSessionPath)
+	if reason != nil {
+		fmt.Println("[-] It is not possible to read the directory with session files")
+		os.Exit(1)
+	}
+	//TODO: copy files from tem directory to dataDIR
+	for sessioFileID := range sessionFiles {
+		if reason := os.Rename(TempSessionPath+sessionFiles[sessioFileID].Name(),
+			c.DataDir+"/"+sessionFiles[sessioFileID].Name()); reason != nil {
+			fmt.Println("[-] Could not copy session files")
+		}
+	}
+
 }
 
 // SmskoGetNumberStatus return count available phones number for order

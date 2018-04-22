@@ -62,7 +62,7 @@ func Run(args []string, release, commit, buildTime, appName string) {
 
 	// set commands
 	app.Commands = []cli.Command{
-		generateCommand,
+		generateCommand, runCommand,
 	}
 
 	// start app

@@ -90,3 +90,22 @@ func (account *SessionTelegram) RegisterNewAccount(PhoneNumber string, smsCode s
 	return nil
 
 }
+
+// FindAndJoinedToChannel join accounts to target channel
+func (account *SessionTelegram) FindAndJoinedToChannel(channelID string) error {
+	tl, reason := account.InvokeSync(mtproto.TL_contacts_resolveUsername{Username: channelID})
+	if reason != nil {
+		return errors.New(reason.Error())
+	}
+
+	peer := (*tl).(mtproto.TL_contacts_resolvedPeer)
+	channel := peer.Chats[0].(mtproto.TL_channel)
+
+	inputChannel := mtproto.TL_inputChannel{Channel_id: channel.Id, Access_hash: channel.Access_hash}
+	if _, reason := account.InvokeSync(mtproto.TL_channels_joinChannel{
+		Channel: inputChannel,
+	}); reason != nil {
+		return errors.New(reason.Error())
+	}
+	return nil
+}
